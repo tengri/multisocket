@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+     <meta charset=utf-8>
+     <meta name="viewport" content="width=620">
+     <script type="text/javascript" src="https://yastatic.net/jquery/2.1.4/jquery.min.js"></script>
+<script type="text/javascript" src="broadcast.js"></script>
+<body>
+
+<label>
+     Сообщение
+     <input type="text" id="msg">
+     <button id="btn" >Отправить</button>
+</label>
+
+<p id="log"></p>
+
+     <script>
+
+
+          var websocket;
+          var isMaster = false;
+          var broadcast = new Broadcast();
+          var id = Math.random().toString();
+          if (!broadcast.get('masterTime')) broadcast.set('masterTime', 0);
+
+
+          var createWs = function(){
+               websocket = new WebSocket('ws://echo.websocket.org');
+               websocket.onopen = function(evt) {
+                    console.log('ws open: ', evt);
+               };
+               websocket.onclose = function(evt) {
+                    console.log('ws close: ', evt);
+               };
+               websocket.onmessage = function(evt) {
+                    console.log('ws message: ', evt);
+                    broadcast.set('res', evt.data);
+               };
+               return websocket;
+          };
+
+
+          setInterval(function(){
+               isMaster = websocket&&id===broadcast.get('masterId');
+               if (isMaster) {
+                    console.log('IT IS MASTER!');
+                    broadcast.set('masterTime', Date.now());
+               } else {
+                    console.log('IT IS SLAVE!');
+                    if (websocket) websocket.close();
+                    if (parseInt(broadcast.get('masterTime')) + 3000 < Date.now()){
+                         console.log('NEED CREATE NEW WS CONNECTION!');
+                         broadcast.set('masterId', id);
+                         broadcast.set('masterTime', Date.now());
+                         websocket = createWs();
+                    }
+               }
+          }, 2000);
+
+
+          $(function(){
+               $('#btn').click(function(){
+                    var value = $('#msg').val();
+                    broadcast.set('req', value);
+               });
+
+               broadcast.listen('res', function(value){
+                    $('#log').text(value);
+               });
+
+               broadcast.listen('req', function(value){
+                    if (isMaster && websocket) {
+                         websocket.send(value);
+                    }
+               })
+          })
+
+     </script>
+
+</body>
+</html>
