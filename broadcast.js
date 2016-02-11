@@ -15,7 +15,7 @@ var Broadcast = function(){
     };
 
     var unwrap = function(str){
-        return JSON.parse(str).value;
+        if (JSON.parse(str)) return JSON.parse(str).value;
     };
 
     this.set = function(key, value){
