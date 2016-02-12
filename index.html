@@ -20,9 +20,8 @@
           var websocket;
           var isMaster = false;
           var broadcast = new Broadcast();
-          var myId = Math.random().toString();
-          if (!broadcast.get('masterTime')) broadcast.set('masterTime', 0);
-          if (!broadcast.get('challengerId'))broadcast.set('challengerId', 0);
+          var myId = Date.now()+Math.floor(Math.random()*1000)+'';
+//          if (!broadcast.get('masterTime')) broadcast.set('masterTime', 0);
 
           //todo: гонки при запуске браузера с несоклькими вкладками
 
@@ -49,8 +48,19 @@
           setInterval(function(){
                isMaster = myId===broadcast.get('masterId');
 
-               if ((!isMaster) && (myId>broadcast.get('challengerId'))){
+
+
+               var challengerId = broadcast.get('challengerId');
+               console.log('challengerId: ', challengerId);
+
+               if ((!isMaster) && ( (!challengerId)||(parseInt(myId)<parseInt(challengerId)) )){
                     broadcast.set('challengerId', myId);
+                    broadcast.set('challengerTime', Date.now());
+                    console.log('IT IS CHALLENGER!');
+               }
+
+               if (parseInt(broadcast.get('challengerTime'))+4000<Date.now()){
+                    broadcast.set('challengerId', null);
                }
 
                if (isMaster) {
@@ -60,10 +70,10 @@
                     console.log('IT IS SLAVE!');
 
                     var now = Date.now();
-                    if ((parseInt(broadcast.get('masterTime')) + 3000 < now) && (broadcast.get('challengerId')===myId)){
+                    var masterTime = parseInt(broadcast.get('masterTime'))||0;
+                    if ((masterTime) + 3000 < now && (broadcast.get('challengerId')===myId)){
                          broadcast.set('masterId', myId);
                          broadcast.set('masterTime', now);
-                         broadcast.set('challengerId', 0);
 
                          setTimeout(function(){
                               //на случай если откроется новая вкладка, станет челенджером, прочекает что, мастер сдох и станет мастером
