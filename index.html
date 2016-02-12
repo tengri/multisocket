@@ -17,15 +17,20 @@
 
      <script>
 
-
           var websocket;
           var isMaster = false;
           var broadcast = new Broadcast();
-          var id = Math.random().toString();
+          var myId = Math.random().toString();
           if (!broadcast.get('masterTime')) broadcast.set('masterTime', 0);
+          if (!broadcast.get('challengerId'))broadcast.set('challengerId', 0);
+
+          //todo: гонки при запуске браузера с несоклькими вкладками
+
 
 
           var createWs = function(){
+               console.log('CREATE NEW WS CONNECTION!');
+
                websocket = new WebSocket('ws://echo.websocket.org');
                websocket.onopen = function(evt) {
                     console.log('ws open: ', evt);
@@ -42,18 +47,30 @@
 
 
           setInterval(function(){
-               isMaster = websocket&&id===broadcast.get('masterId');
+               isMaster = myId===broadcast.get('masterId');
+
+               if ((!isMaster) && (myId>broadcast.get('challengerId'))){
+                    broadcast.set('challengerId', myId);
+               }
+
                if (isMaster) {
                     console.log('IT IS MASTER!');
                     broadcast.set('masterTime', Date.now());
                } else {
                     console.log('IT IS SLAVE!');
-                    if (websocket) websocket.close();
-                    if (parseInt(broadcast.get('masterTime')) + 3000 < Date.now()){
-                         console.log('NEED CREATE NEW WS CONNECTION!');
-                         broadcast.set('masterId', id);
-                         broadcast.set('masterTime', Date.now());
-                         websocket = createWs();
+
+                    var now = Date.now();
+                    if ((parseInt(broadcast.get('masterTime')) + 3000 < now) && (broadcast.get('challengerId')===myId)){
+                         broadcast.set('masterId', myId);
+                         broadcast.set('masterTime', now);
+                         broadcast.set('challengerId', 0);
+
+                         setTimeout(function(){
+                              //на случай если откроется новая вкладка, станет челенджером, прочекает что, мастер сдох и станет мастером
+                              if (myId===broadcast.get('masterId')){
+                                   websocket = createWs();
+                              } else console.log('СМЕНА МАСТЕРА!!!');
+                         }, 1000);
                     }
                }
           }, 2000);
