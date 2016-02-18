@@ -43,19 +43,26 @@
 
           setTimeout(function(){
 
-
                setInterval(function(){
-                    isMaster = id===broadcast.get('masterId');
-                    if (isMaster) {
-                         console.log('IT IS MASTER!');
-                         if (!websocket) websocket = createWs();
-                         broadcast.set('masterTime', Date.now());
+                    if (id==broadcast.get('masterId')) {
+
+                         if (parseInt(broadcast.get('masterTime')) + 2500 < Date.now()){
+                              console.log('NEED CREATE NEW WS CONNECTION!');
+                              setTimeout(function(){
+                                   if (id==broadcast.get('masterId')) {
+                                        broadcast.set('masterTime', Date.now());
+                                        console.log('NOW IT IS MASTER!');
+                                   }
+                              }, 1000);
+                         } else {
+                              console.log('IT IS MASTER!');
+                              broadcast.set('masterTime', Date.now());
+                              if (!websocket) websocket = createWs();
+                         }
+
                     } else {
                          console.log('IT IS SLAVE!');
-                         if (parseInt(broadcast.get('masterTime')) + 3000 < Date.now()){
-                              console.log('NEED CREATE NEW WS CONNECTION!');
-                              broadcast.set('masterId', id);
-                         }
+                         if (parseInt(broadcast.get('masterTime')) + 2500 < Date.now()) broadcast.set('masterId', id);
                     }
                }, 2000);
 
